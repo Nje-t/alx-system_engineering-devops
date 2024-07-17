@@ -1,0 +1,109 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Volunteer {
+  id             String     @id @default(cuid())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  profilePicture Json?
+  bio            String?
+  name           String?
+  email          String?
+  stories        Story[]
+  donations      Donation[]
+  comments       Comment[]
+}
+
+model Story {
+  id          String     @id @default(cuid())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  title       String?
+  content     String?
+  image       Json?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  volunteer   Volunteer? @relation(fields: [volunteerId], references: [id])
+  volunteerId String?
+  comments    Comment[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String?
+  description String?
+  stories     Story[]
+}
+
+model ForumPost {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  date      DateTime?
+  title     String?
+  content   String?
+  postedBy  String?
+}
+
+model Comment {
+  id          String     @id @default(cuid())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  content     String?
+  story       Story?     @relation(fields: [storyId], references: [id])
+  storyId     String?
+  volunteer   Volunteer? @relation(fields: [volunteerId], references: [id])
+  volunteerId String?
+}
+
+model VolunteerOpportunity {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String?
+  description String?
+  location    String?
+  eventDate   DateTime?
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String?
+  description String?
+  date        DateTime?
+  location    String?
+}
+
+model Fundraiser {
+  id            String     @id @default(cuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  title         String?
+  description   String?
+  goalAmount    Float?
+  currentAmount Float?
+  organization  String?
+  donations     Donation[]
+}
+
+model Donation {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  amount       Float?
+  date         DateTime?
+  volunteer    Volunteer?  @relation(fields: [volunteerId], references: [id])
+  volunteerId  String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
+  fundraiserId String?
+}

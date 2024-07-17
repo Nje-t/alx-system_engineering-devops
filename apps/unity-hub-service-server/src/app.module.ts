@@ -9,6 +9,7 @@ import { EventModule } from "./event/event.module";
 import { FundraiserModule } from "./fundraiser/fundraiser.module";
 import { DonationModule } from "./donation/donation.module";
 import { UserModule } from "./user/user.module";
+import { RoleModule } from "./role/role.module";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { SecretsManagerModule } from "./providers/secrets/secretsManager.module";
@@ -36,6 +37,7 @@ import { AuthModule } from "./auth/auth.module";
     FundraiserModule,
     DonationModule,
     UserModule,
+    RoleModule,
     HealthModule,
     PrismaModule,
     SecretsManagerModule,

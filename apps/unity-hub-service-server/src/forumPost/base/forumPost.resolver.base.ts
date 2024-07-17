@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { ForumPost } from "./ForumPost";
 import { ForumPostCountArgs } from "./ForumPostCountArgs";
 import { ForumPostFindManyArgs } from "./ForumPostFindManyArgs";
@@ -21,10 +27,20 @@ import { CreateForumPostArgs } from "./CreateForumPostArgs";
 import { UpdateForumPostArgs } from "./UpdateForumPostArgs";
 import { DeleteForumPostArgs } from "./DeleteForumPostArgs";
 import { ForumPostService } from "../forumPost.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => ForumPost)
 export class ForumPostResolverBase {
-  constructor(protected readonly service: ForumPostService) {}
+  constructor(
+    protected readonly service: ForumPostService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "read",
+    possession: "any",
+  })
   async _forumPostsMeta(
     @graphql.Args() args: ForumPostCountArgs
   ): Promise<MetaQueryPayload> {
@@ -34,14 +50,26 @@ export class ForumPostResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [ForumPost])
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "read",
+    possession: "any",
+  })
   async forumPosts(
     @graphql.Args() args: ForumPostFindManyArgs
   ): Promise<ForumPost[]> {
     return this.service.forumPosts(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => ForumPost, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "read",
+    possession: "own",
+  })
   async forumPost(
     @graphql.Args() args: ForumPostFindUniqueArgs
   ): Promise<ForumPost | null> {
@@ -52,7 +80,13 @@ export class ForumPostResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ForumPost)
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "create",
+    possession: "any",
+  })
   async createForumPost(
     @graphql.Args() args: CreateForumPostArgs
   ): Promise<ForumPost> {
@@ -62,7 +96,13 @@ export class ForumPostResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ForumPost)
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "update",
+    possession: "any",
+  })
   async updateForumPost(
     @graphql.Args() args: UpdateForumPostArgs
   ): Promise<ForumPost | null> {
@@ -82,6 +122,11 @@ export class ForumPostResolverBase {
   }
 
   @graphql.Mutation(() => ForumPost)
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "delete",
+    possession: "any",
+  })
   async deleteForumPost(
     @graphql.Args() args: DeleteForumPostArgs
   ): Promise<ForumPost | null> {

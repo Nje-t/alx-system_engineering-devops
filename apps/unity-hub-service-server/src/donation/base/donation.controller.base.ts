@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { DonationService } from "../donation.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { DonationCreateInput } from "./DonationCreateInput";
 import { Donation } from "./Donation";
 import { DonationFindManyArgs } from "./DonationFindManyArgs";
 import { DonationWhereUniqueInput } from "./DonationWhereUniqueInput";
 import { DonationUpdateInput } from "./DonationUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class DonationControllerBase {
-  constructor(protected readonly service: DonationService) {}
+  constructor(
+    protected readonly service: DonationService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Donation })
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createDonation(
     @common.Body() data: DonationCreateInput
   ): Promise<Donation> {
@@ -68,9 +86,18 @@ export class DonationControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Donation] })
   @ApiNestedQuery(DonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async donations(@common.Req() request: Request): Promise<Donation[]> {
     const args = plainToClass(DonationFindManyArgs, request.query);
     return this.service.donations({
@@ -97,9 +124,18 @@ export class DonationControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Donation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async donation(
     @common.Param() params: DonationWhereUniqueInput
   ): Promise<Donation | null> {
@@ -133,9 +169,18 @@ export class DonationControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Donation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateDonation(
     @common.Param() params: DonationWhereUniqueInput,
     @common.Body() data: DonationUpdateInput
@@ -191,6 +236,14 @@ export class DonationControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Donation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteDonation(
     @common.Param() params: DonationWhereUniqueInput
   ): Promise<Donation | null> {

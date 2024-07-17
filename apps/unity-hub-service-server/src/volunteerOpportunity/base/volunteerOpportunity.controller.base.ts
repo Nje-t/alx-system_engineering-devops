@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { VolunteerOpportunityService } from "../volunteerOpportunity.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { VolunteerOpportunityCreateInput } from "./VolunteerOpportunityCreateInput";
 import { VolunteerOpportunity } from "./VolunteerOpportunity";
 import { VolunteerOpportunityFindManyArgs } from "./VolunteerOpportunityFindManyArgs";
 import { VolunteerOpportunityWhereUniqueInput } from "./VolunteerOpportunityWhereUniqueInput";
 import { VolunteerOpportunityUpdateInput } from "./VolunteerOpportunityUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class VolunteerOpportunityControllerBase {
-  constructor(protected readonly service: VolunteerOpportunityService) {}
+  constructor(
+    protected readonly service: VolunteerOpportunityService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: VolunteerOpportunity })
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createVolunteerOpportunity(
     @common.Body() data: VolunteerOpportunityCreateInput
   ): Promise<VolunteerOpportunity> {
@@ -44,9 +62,18 @@ export class VolunteerOpportunityControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [VolunteerOpportunity] })
   @ApiNestedQuery(VolunteerOpportunityFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async volunteerOpportunities(
     @common.Req() request: Request
   ): Promise<VolunteerOpportunity[]> {
@@ -65,9 +92,18 @@ export class VolunteerOpportunityControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: VolunteerOpportunity })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async volunteerOpportunity(
     @common.Param() params: VolunteerOpportunityWhereUniqueInput
   ): Promise<VolunteerOpportunity | null> {
@@ -91,9 +127,18 @@ export class VolunteerOpportunityControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: VolunteerOpportunity })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateVolunteerOpportunity(
     @common.Param() params: VolunteerOpportunityWhereUniqueInput,
     @common.Body() data: VolunteerOpportunityUpdateInput
@@ -125,6 +170,14 @@ export class VolunteerOpportunityControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: VolunteerOpportunity })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteVolunteerOpportunity(
     @common.Param() params: VolunteerOpportunityWhereUniqueInput
   ): Promise<VolunteerOpportunity | null> {

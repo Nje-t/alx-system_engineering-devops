@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Comment } from "./Comment";
 import { CommentCountArgs } from "./CommentCountArgs";
 import { CommentFindManyArgs } from "./CommentFindManyArgs";
@@ -23,10 +29,20 @@ import { DeleteCommentArgs } from "./DeleteCommentArgs";
 import { Story } from "../../story/base/Story";
 import { Volunteer } from "../../volunteer/base/Volunteer";
 import { CommentService } from "../comment.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Comment)
 export class CommentResolverBase {
-  constructor(protected readonly service: CommentService) {}
+  constructor(
+    protected readonly service: CommentService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "read",
+    possession: "any",
+  })
   async _commentsMeta(
     @graphql.Args() args: CommentCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,14 +52,26 @@ export class CommentResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Comment])
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "read",
+    possession: "any",
+  })
   async comments(
     @graphql.Args() args: CommentFindManyArgs
   ): Promise<Comment[]> {
     return this.service.comments(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Comment, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "read",
+    possession: "own",
+  })
   async comment(
     @graphql.Args() args: CommentFindUniqueArgs
   ): Promise<Comment | null> {
@@ -54,7 +82,13 @@ export class CommentResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Comment)
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "create",
+    possession: "any",
+  })
   async createComment(
     @graphql.Args() args: CreateCommentArgs
   ): Promise<Comment> {
@@ -78,7 +112,13 @@ export class CommentResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Comment)
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "update",
+    possession: "any",
+  })
   async updateComment(
     @graphql.Args() args: UpdateCommentArgs
   ): Promise<Comment | null> {
@@ -112,6 +152,11 @@ export class CommentResolverBase {
   }
 
   @graphql.Mutation(() => Comment)
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "delete",
+    possession: "any",
+  })
   async deleteComment(
     @graphql.Args() args: DeleteCommentArgs
   ): Promise<Comment | null> {
@@ -127,9 +172,15 @@ export class CommentResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Story, {
     nullable: true,
     name: "story",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Story",
+    action: "read",
+    possession: "any",
   })
   async getStory(@graphql.Parent() parent: Comment): Promise<Story | null> {
     const result = await this.service.getStory(parent.id);
@@ -140,9 +191,15 @@ export class CommentResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Volunteer, {
     nullable: true,
     name: "volunteer",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "any",
   })
   async getVolunteer(
     @graphql.Parent() parent: Comment

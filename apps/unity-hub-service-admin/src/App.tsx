@@ -41,6 +41,10 @@ import { DonationList } from "./donation/DonationList";
 import { DonationCreate } from "./donation/DonationCreate";
 import { DonationEdit } from "./donation/DonationEdit";
 import { DonationShow } from "./donation/DonationShow";
+import { UserList } from "./user/UserList";
+import { UserCreate } from "./user/UserCreate";
+import { UserEdit } from "./user/UserEdit";
+import { UserShow } from "./user/UserShow";
 import { jwtAuthProvider } from "./auth-provider/ra-auth-jwt";
 
 const App = (): React.ReactElement => {
@@ -129,6 +133,13 @@ const App = (): React.ReactElement => {
           edit={DonationEdit}
           create={DonationCreate}
           show={DonationShow}
+        />
+        <Resource
+          name="User"
+          list={UserList}
+          edit={UserEdit}
+          create={UserCreate}
+          show={UserShow}
         />
       </Admin>
     </div>

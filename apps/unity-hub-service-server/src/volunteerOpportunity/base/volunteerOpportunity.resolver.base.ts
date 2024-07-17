@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { VolunteerOpportunity } from "./VolunteerOpportunity";
 import { VolunteerOpportunityCountArgs } from "./VolunteerOpportunityCountArgs";
 import { VolunteerOpportunityFindManyArgs } from "./VolunteerOpportunityFindManyArgs";
@@ -21,10 +27,20 @@ import { CreateVolunteerOpportunityArgs } from "./CreateVolunteerOpportunityArgs
 import { UpdateVolunteerOpportunityArgs } from "./UpdateVolunteerOpportunityArgs";
 import { DeleteVolunteerOpportunityArgs } from "./DeleteVolunteerOpportunityArgs";
 import { VolunteerOpportunityService } from "../volunteerOpportunity.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => VolunteerOpportunity)
 export class VolunteerOpportunityResolverBase {
-  constructor(protected readonly service: VolunteerOpportunityService) {}
+  constructor(
+    protected readonly service: VolunteerOpportunityService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "read",
+    possession: "any",
+  })
   async _volunteerOpportunitiesMeta(
     @graphql.Args() args: VolunteerOpportunityCountArgs
   ): Promise<MetaQueryPayload> {
@@ -34,14 +50,26 @@ export class VolunteerOpportunityResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [VolunteerOpportunity])
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "read",
+    possession: "any",
+  })
   async volunteerOpportunities(
     @graphql.Args() args: VolunteerOpportunityFindManyArgs
   ): Promise<VolunteerOpportunity[]> {
     return this.service.volunteerOpportunities(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => VolunteerOpportunity, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "read",
+    possession: "own",
+  })
   async volunteerOpportunity(
     @graphql.Args() args: VolunteerOpportunityFindUniqueArgs
   ): Promise<VolunteerOpportunity | null> {
@@ -52,7 +80,13 @@ export class VolunteerOpportunityResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => VolunteerOpportunity)
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "create",
+    possession: "any",
+  })
   async createVolunteerOpportunity(
     @graphql.Args() args: CreateVolunteerOpportunityArgs
   ): Promise<VolunteerOpportunity> {
@@ -62,7 +96,13 @@ export class VolunteerOpportunityResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => VolunteerOpportunity)
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "update",
+    possession: "any",
+  })
   async updateVolunteerOpportunity(
     @graphql.Args() args: UpdateVolunteerOpportunityArgs
   ): Promise<VolunteerOpportunity | null> {
@@ -82,6 +122,11 @@ export class VolunteerOpportunityResolverBase {
   }
 
   @graphql.Mutation(() => VolunteerOpportunity)
+  @nestAccessControl.UseRoles({
+    resource: "VolunteerOpportunity",
+    action: "delete",
+    possession: "any",
+  })
   async deleteVolunteerOpportunity(
     @graphql.Args() args: DeleteVolunteerOpportunityArgs
   ): Promise<VolunteerOpportunity | null> {

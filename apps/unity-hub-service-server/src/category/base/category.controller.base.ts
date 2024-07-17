@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { CategoryService } from "../category.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { CategoryCreateInput } from "./CategoryCreateInput";
 import { Category } from "./Category";
 import { CategoryFindManyArgs } from "./CategoryFindManyArgs";
@@ -26,10 +30,24 @@ import { StoryFindManyArgs } from "../../story/base/StoryFindManyArgs";
 import { Story } from "../../story/base/Story";
 import { StoryWhereUniqueInput } from "../../story/base/StoryWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class CategoryControllerBase {
-  constructor(protected readonly service: CategoryService) {}
+  constructor(
+    protected readonly service: CategoryService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Category })
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createCategory(
     @common.Body() data: CategoryCreateInput
   ): Promise<Category> {
@@ -45,9 +63,18 @@ export class CategoryControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Category] })
   @ApiNestedQuery(CategoryFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async categories(@common.Req() request: Request): Promise<Category[]> {
     const args = plainToClass(CategoryFindManyArgs, request.query);
     return this.service.categories({
@@ -62,9 +89,18 @@ export class CategoryControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Category })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async category(
     @common.Param() params: CategoryWhereUniqueInput
   ): Promise<Category | null> {
@@ -86,9 +122,18 @@ export class CategoryControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Category })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateCategory(
     @common.Param() params: CategoryWhereUniqueInput,
     @common.Body() data: CategoryUpdateInput
@@ -118,6 +163,14 @@ export class CategoryControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Category })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteCategory(
     @common.Param() params: CategoryWhereUniqueInput
   ): Promise<Category | null> {
@@ -142,8 +195,14 @@ export class CategoryControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/stories")
   @ApiNestedQuery(StoryFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Story",
+    action: "read",
+    possession: "any",
+  })
   async findStories(
     @common.Req() request: Request,
     @common.Param() params: CategoryWhereUniqueInput
@@ -181,6 +240,11 @@ export class CategoryControllerBase {
   }
 
   @common.Post("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "update",
+    possession: "any",
+  })
   async connectStories(
     @common.Param() params: CategoryWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]
@@ -198,6 +262,11 @@ export class CategoryControllerBase {
   }
 
   @common.Patch("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "update",
+    possession: "any",
+  })
   async updateStories(
     @common.Param() params: CategoryWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]
@@ -215,6 +284,11 @@ export class CategoryControllerBase {
   }
 
   @common.Delete("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Category",
+    action: "update",
+    possession: "any",
+  })
   async disconnectStories(
     @common.Param() params: CategoryWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]

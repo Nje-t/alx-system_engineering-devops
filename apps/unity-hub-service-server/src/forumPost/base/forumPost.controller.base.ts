@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ForumPostService } from "../forumPost.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ForumPostCreateInput } from "./ForumPostCreateInput";
 import { ForumPost } from "./ForumPost";
 import { ForumPostFindManyArgs } from "./ForumPostFindManyArgs";
 import { ForumPostWhereUniqueInput } from "./ForumPostWhereUniqueInput";
 import { ForumPostUpdateInput } from "./ForumPostUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ForumPostControllerBase {
-  constructor(protected readonly service: ForumPostService) {}
+  constructor(
+    protected readonly service: ForumPostService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ForumPost })
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createForumPost(
     @common.Body() data: ForumPostCreateInput
   ): Promise<ForumPost> {
@@ -44,9 +62,18 @@ export class ForumPostControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ForumPost] })
   @ApiNestedQuery(ForumPostFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async forumPosts(@common.Req() request: Request): Promise<ForumPost[]> {
     const args = plainToClass(ForumPostFindManyArgs, request.query);
     return this.service.forumPosts({
@@ -63,9 +90,18 @@ export class ForumPostControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ForumPost })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async forumPost(
     @common.Param() params: ForumPostWhereUniqueInput
   ): Promise<ForumPost | null> {
@@ -89,9 +125,18 @@ export class ForumPostControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ForumPost })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateForumPost(
     @common.Param() params: ForumPostWhereUniqueInput,
     @common.Body() data: ForumPostUpdateInput
@@ -123,6 +168,14 @@ export class ForumPostControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ForumPost })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ForumPost",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteForumPost(
     @common.Param() params: ForumPostWhereUniqueInput
   ): Promise<ForumPost | null> {

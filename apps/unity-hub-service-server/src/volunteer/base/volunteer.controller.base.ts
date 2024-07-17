@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { VolunteerService } from "../volunteer.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { VolunteerCreateInput } from "./VolunteerCreateInput";
 import { Volunteer } from "./Volunteer";
 import { VolunteerFindManyArgs } from "./VolunteerFindManyArgs";
@@ -32,10 +36,24 @@ import { CommentFindManyArgs } from "../../comment/base/CommentFindManyArgs";
 import { Comment } from "../../comment/base/Comment";
 import { CommentWhereUniqueInput } from "../../comment/base/CommentWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class VolunteerControllerBase {
-  constructor(protected readonly service: VolunteerService) {}
+  constructor(
+    protected readonly service: VolunteerService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Volunteer })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createVolunteer(
     @common.Body() data: VolunteerCreateInput
   ): Promise<Volunteer> {
@@ -53,9 +71,18 @@ export class VolunteerControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Volunteer] })
   @ApiNestedQuery(VolunteerFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async volunteers(@common.Req() request: Request): Promise<Volunteer[]> {
     const args = plainToClass(VolunteerFindManyArgs, request.query);
     return this.service.volunteers({
@@ -72,9 +99,18 @@ export class VolunteerControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Volunteer })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async volunteer(
     @common.Param() params: VolunteerWhereUniqueInput
   ): Promise<Volunteer | null> {
@@ -98,9 +134,18 @@ export class VolunteerControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Volunteer })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateVolunteer(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() data: VolunteerUpdateInput
@@ -132,6 +177,14 @@ export class VolunteerControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Volunteer })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteVolunteer(
     @common.Param() params: VolunteerWhereUniqueInput
   ): Promise<Volunteer | null> {
@@ -158,8 +211,14 @@ export class VolunteerControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/stories")
   @ApiNestedQuery(StoryFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Story",
+    action: "read",
+    possession: "any",
+  })
   async findStories(
     @common.Req() request: Request,
     @common.Param() params: VolunteerWhereUniqueInput
@@ -197,6 +256,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Post("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async connectStories(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]
@@ -214,6 +278,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Patch("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async updateStories(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]
@@ -231,6 +300,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Delete("/:id/stories")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async disconnectStories(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: StoryWhereUniqueInput[]
@@ -247,8 +321,14 @@ export class VolunteerControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/donations")
   @ApiNestedQuery(DonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "read",
+    possession: "any",
+  })
   async findDonations(
     @common.Req() request: Request,
     @common.Param() params: VolunteerWhereUniqueInput
@@ -285,6 +365,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Post("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async connectDonations(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]
@@ -302,6 +387,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Patch("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async updateDonations(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]
@@ -319,6 +409,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Delete("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async disconnectDonations(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]
@@ -335,8 +430,14 @@ export class VolunteerControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/comments")
   @ApiNestedQuery(CommentFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "read",
+    possession: "any",
+  })
   async findComments(
     @common.Req() request: Request,
     @common.Param() params: VolunteerWhereUniqueInput
@@ -372,6 +473,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Post("/:id/comments")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async connectComments(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: CommentWhereUniqueInput[]
@@ -389,6 +495,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Patch("/:id/comments")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async updateComments(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: CommentWhereUniqueInput[]
@@ -406,6 +517,11 @@ export class VolunteerControllerBase {
   }
 
   @common.Delete("/:id/comments")
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async disconnectComments(
     @common.Param() params: VolunteerWhereUniqueInput,
     @common.Body() body: CommentWhereUniqueInput[]

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Volunteer } from "./Volunteer";
 import { VolunteerCountArgs } from "./VolunteerCountArgs";
 import { VolunteerFindManyArgs } from "./VolunteerFindManyArgs";
@@ -27,10 +33,20 @@ import { Donation } from "../../donation/base/Donation";
 import { CommentFindManyArgs } from "../../comment/base/CommentFindManyArgs";
 import { Comment } from "../../comment/base/Comment";
 import { VolunteerService } from "../volunteer.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Volunteer)
 export class VolunteerResolverBase {
-  constructor(protected readonly service: VolunteerService) {}
+  constructor(
+    protected readonly service: VolunteerService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "any",
+  })
   async _volunteersMeta(
     @graphql.Args() args: VolunteerCountArgs
   ): Promise<MetaQueryPayload> {
@@ -40,14 +56,26 @@ export class VolunteerResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Volunteer])
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "any",
+  })
   async volunteers(
     @graphql.Args() args: VolunteerFindManyArgs
   ): Promise<Volunteer[]> {
     return this.service.volunteers(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Volunteer, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "read",
+    possession: "own",
+  })
   async volunteer(
     @graphql.Args() args: VolunteerFindUniqueArgs
   ): Promise<Volunteer | null> {
@@ -58,7 +86,13 @@ export class VolunteerResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Volunteer)
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "create",
+    possession: "any",
+  })
   async createVolunteer(
     @graphql.Args() args: CreateVolunteerArgs
   ): Promise<Volunteer> {
@@ -68,7 +102,13 @@ export class VolunteerResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Volunteer)
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "update",
+    possession: "any",
+  })
   async updateVolunteer(
     @graphql.Args() args: UpdateVolunteerArgs
   ): Promise<Volunteer | null> {
@@ -88,6 +128,11 @@ export class VolunteerResolverBase {
   }
 
   @graphql.Mutation(() => Volunteer)
+  @nestAccessControl.UseRoles({
+    resource: "Volunteer",
+    action: "delete",
+    possession: "any",
+  })
   async deleteVolunteer(
     @graphql.Args() args: DeleteVolunteerArgs
   ): Promise<Volunteer | null> {
@@ -103,7 +148,13 @@ export class VolunteerResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Story], { name: "stories" })
+  @nestAccessControl.UseRoles({
+    resource: "Story",
+    action: "read",
+    possession: "any",
+  })
   async findStories(
     @graphql.Parent() parent: Volunteer,
     @graphql.Args() args: StoryFindManyArgs
@@ -117,7 +168,13 @@ export class VolunteerResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Donation], { name: "donations" })
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "read",
+    possession: "any",
+  })
   async findDonations(
     @graphql.Parent() parent: Volunteer,
     @graphql.Args() args: DonationFindManyArgs
@@ -131,7 +188,13 @@ export class VolunteerResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Comment], { name: "comments" })
+  @nestAccessControl.UseRoles({
+    resource: "Comment",
+    action: "read",
+    possession: "any",
+  })
   async findComments(
     @graphql.Parent() parent: Volunteer,
     @graphql.Args() args: CommentFindManyArgs

@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { FundraiserService } from "../fundraiser.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { FundraiserCreateInput } from "./FundraiserCreateInput";
 import { Fundraiser } from "./Fundraiser";
 import { FundraiserFindManyArgs } from "./FundraiserFindManyArgs";
@@ -26,10 +30,24 @@ import { DonationFindManyArgs } from "../../donation/base/DonationFindManyArgs";
 import { Donation } from "../../donation/base/Donation";
 import { DonationWhereUniqueInput } from "../../donation/base/DonationWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class FundraiserControllerBase {
-  constructor(protected readonly service: FundraiserService) {}
+  constructor(
+    protected readonly service: FundraiserService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Fundraiser })
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createFundraiser(
     @common.Body() data: FundraiserCreateInput
   ): Promise<Fundraiser> {
@@ -48,9 +66,18 @@ export class FundraiserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Fundraiser] })
   @ApiNestedQuery(FundraiserFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async fundraisers(@common.Req() request: Request): Promise<Fundraiser[]> {
     const args = plainToClass(FundraiserFindManyArgs, request.query);
     return this.service.fundraisers({
@@ -68,9 +95,18 @@ export class FundraiserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Fundraiser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async fundraiser(
     @common.Param() params: FundraiserWhereUniqueInput
   ): Promise<Fundraiser | null> {
@@ -95,9 +131,18 @@ export class FundraiserControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Fundraiser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateFundraiser(
     @common.Param() params: FundraiserWhereUniqueInput,
     @common.Body() data: FundraiserUpdateInput
@@ -130,6 +175,14 @@ export class FundraiserControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Fundraiser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteFundraiser(
     @common.Param() params: FundraiserWhereUniqueInput
   ): Promise<Fundraiser | null> {
@@ -157,8 +210,14 @@ export class FundraiserControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/donations")
   @ApiNestedQuery(DonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Donation",
+    action: "read",
+    possession: "any",
+  })
   async findDonations(
     @common.Req() request: Request,
     @common.Param() params: FundraiserWhereUniqueInput
@@ -195,6 +254,11 @@ export class FundraiserControllerBase {
   }
 
   @common.Post("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "update",
+    possession: "any",
+  })
   async connectDonations(
     @common.Param() params: FundraiserWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]
@@ -212,6 +276,11 @@ export class FundraiserControllerBase {
   }
 
   @common.Patch("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "update",
+    possession: "any",
+  })
   async updateDonations(
     @common.Param() params: FundraiserWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]
@@ -229,6 +298,11 @@ export class FundraiserControllerBase {
   }
 
   @common.Delete("/:id/donations")
+  @nestAccessControl.UseRoles({
+    resource: "Fundraiser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectDonations(
     @common.Param() params: FundraiserWhereUniqueInput,
     @common.Body() body: DonationWhereUniqueInput[]

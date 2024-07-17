@@ -1,3 +1,4 @@
+import { RedisModule } from "./redis/redis.module";
 import { Module } from "@nestjs/common";
 import { VolunteerModule } from "./volunteer/volunteer.module";
 import { StoryModule } from "./story/story.module";
@@ -60,6 +61,7 @@ import { AuthModule } from "./auth/auth.module";
       inject: [ConfigService],
       imports: [ConfigModule],
     }),
+    RedisModule,
   ],
   providers: [],
 })
